@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     let totalAmount = 0;
     const orderItems = items.map((i: any) => {
       const product = productMap.get(i?.productId);
-      const price = product?.price ?? 0;
+      const price = (product as any)?.price ?? 0;
       const qty = i?.quantity ?? 1;
       totalAmount += price * qty;
       return { productId: i?.productId, quantity: qty, price };
