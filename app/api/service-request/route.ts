@@ -9,7 +9,8 @@ export async function POST(request: Request) {
     if (!data?.name || !data?.email || !data?.description || !data?.serviceType) {
       return NextResponse.json({ error: "Заполните все обязательные поля" }, { status: 400 });
     }
-    await prisma.serviceRequest.create({
+
+    const serviceRequest = await prisma.serviceRequest.create({
       data: {
         serviceType: data.serviceType,
         name: data.name,
@@ -20,27 +21,21 @@ export async function POST(request: Request) {
       },
     });
 
+    // Отправка в Telegram
     try {
-      const appUrl = process.env.NEXTAUTH_URL || '';
-      await fetch('https://apps.abacus.ai/api/sendNotificationEmail', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          deployment_token: process.env.ABACUSAI_API_KEY,
-          app_id: process.env.WEB_APP_ID,
-          notification_id: process.env.NOTIF_ID_ORDER,
-          subject: `Заявка на услугу: ${data.serviceType}`,
-          body: `<div style="font-family:Arial,sans-serif;"><h2 style="color:#FFFD8F;">Новая заявка на услугу</h2><p><strong>Услуга:</strong> ${data.serviceType}</p><p><strong>Имя:</strong> ${data.name}</p><p><strong>Email:</strong> ${data.email}</p><p><strong>Телефон:</strong> ${data.phone || 'Не указан'}</p><p><strong>Описание:</strong> ${data.description}</p><p><strong>Бюджет:</strong> ${data.budget || 'Не указан'}</p></div>`,
-          is_html: true,
-          recipient_email: 'yellolabstudio@gmail.com',
-          reply_to: data.email,
-          sender_email: appUrl ? `noreply@${new URL(appUrl).hostname}` : 'noreply@yellolab.studio',
-          sender_alias: 'Yellolab Studio',
-        }),
-      });
-    } catch {}
+      const token = '8867302266:AAH5xir23T4azcSPnuegn8T6IZSQvDWlMuI';
+      const chatId = '988025379';
+      
+      const message = `🛠 Новая заявка:\n\n📌 Услуга: ${data.serviceType}\n👤 Имя: ${data.name}\n📧 Email: ${data.email}\n📞 Телефон: ${data.phone || 'Не указан'}\n💰 Бюджет: ${data.budget || 'Не указан'}\n💬 Описание: ${data.description}`;
+      
+      const telegramUrl = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(message)}`;
+      
+      await fetch(telegramUrl);
+    } catch (telegramErr) {
+      console.error('Telegram error:', telegramErr);
+    }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, serviceRequest });
   } catch (err: any) {
     console.error(err);
     return NextResponse.json({ error: "Ошибка" }, { status: 500 });
